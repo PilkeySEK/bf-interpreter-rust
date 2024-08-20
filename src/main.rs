@@ -1,16 +1,25 @@
-use std::{fs::File, io::Read, process::exit};
+use std::{
+    fs::File,
+    io::{Read, Write},
+    process::exit,
+};
 
 const MEM_SIZE: usize = 30_000;
 
 fn main() {
-    let filename: &str = "test.bf";
-    println!("Opening file \"{}\"", filename);
-    let file_result: Result<File, std::io::Error> = File::open(filename);
+    let mut input = String::new();
+    print!("File path: ");
+    let _ = std::io::stdout().flush();
+    std::io::stdin()
+        .read_line(&mut input)
+        .expect("Failed to read line :(");
+    input.pop(); input.pop(); // Remove trailing \n and other weird shenanigans idk tbh
+    let file_result: Result<File, std::io::Error> = File::open(input);
     match file_result {
         Err(_) => {
             println!("Fatal Error: Failed to open the file");
-            exit(1);
-        },
+            exit(0);
+        }
         Ok(_) => {}
     }
     let mut file: String = String::new();
@@ -19,7 +28,7 @@ fn main() {
     exit(interpret_bf(file) as i32);
 }
 
-/* 
+/*
     @returns exit code of the bf
 */
 fn interpret_bf(code: String) -> u8 {
@@ -32,20 +41,24 @@ fn interpret_bf(code: String) -> u8 {
     let mut current_char_option: Option<char> = code.chars().nth(current_index);
 
     while current_char_option.is_some() {
-        let mut current_char: char = current_char_option.expect("Fatal Error: failed to unwrap() current_char_option!");
+        let mut current_char: char =
+            current_char_option.expect("Fatal Error: failed to unwrap() current_char_option!");
         match current_char {
             '+' => mem[mem_ptr] += 1,
             '-' => mem[mem_ptr] -= 1,
             '>' => mem_ptr += 1,
             '<' => mem_ptr -= 1,
             '.' => print!("{}", mem[mem_ptr] as char),
-            ',' => mem[mem_ptr] = std::io::stdin()
-            .bytes() 
-            .next()
-            .and_then(|result| result.ok())
-            .map(|byte| byte as u8)
-            .expect("Failed to read char from stdin!"),
-            '[' => {},
+            ',' => {
+                let _ = std::io::stdout().flush();
+                mem[mem_ptr] = std::io::stdin()
+                    .bytes()
+                    .next()
+                    .and_then(|result| result.ok())
+                    .map(|byte| byte as u8)
+                    .expect("Failed to read char from stdin!");
+            }
+            '[' => {}
             ']' => 'label: {
                 if mem[mem_ptr] == 0 {
                     break 'label;
@@ -54,7 +67,6 @@ fn interpret_bf(code: String) -> u8 {
                 while depth != 0 {
                     current_index -= 1;
                     current_char_option = code.chars().nth(current_index);
-                    // current_char = current_char_option.expect("Fatal Error: failed to unwrap() current_char_option!");
                     current_char = current_char_option.unwrap(); // It will panic if there are more ]'s than ['s
                     match current_char {
                         '[' => depth -= 1,
@@ -62,7 +74,7 @@ fn interpret_bf(code: String) -> u8 {
                         _ => {}
                     }
                 }
-            },
+            }
             _ => {}
         }
         current_index += 1;
